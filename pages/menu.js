@@ -1,84 +1,116 @@
+import React, { useState, useEffect,useContext } from "react";
 var Datastore = require('nedb');
 let db = new Datastore({ filename: './db', autoload: true });
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Button, Jumbotron, Image, Form, Modal,Badge, Card, ListGroup, Navbar, Container, Tabs, Tab, Table } from 'react-bootstrap';
-class App extends React.Component {
-    constructor() {
-        super()
-        this.state = {
-            data: [
-                {
-                    id: 0,
-                    title: "迈阿密风情",
-                    price:10,
-                    count: 1,
-                    img: "/static/images/1.jpg"
-                },
-                {
-                    id: 1,
-                    title: "小黄好心情",
-                    price:5,
-                    count: 1,
-                    img: "/static/images/2.jpg"
-                },
-                {
-                    id: 3,
-                    title: "水果的夏天",
-                    price:9.9,
-                    count: 1,
-                    img: "/static/images/3.jpg"
-                }
-            ],
-            show:false,
-            id:0
-        }
-    }
-    sub(item) {
+import { Button, Jumbotron, Image, Modal, Badge, ListGroup,InputGroup} from 'react-bootstrap';
+
+const MyContext = React.createContext()
+
+function Item(){
+    let {item,update} = useContext(MyContext)
+    let sub = () => {
         item.count -= 1;
-        this.setState({
-            data: this.state.data
-        })
+        update(item)
+        // setData(data)
     }
-    add(item) {
+    let add = () => {
         item.count += 1;
-        this.setState({
-            data: this.state.data
-        })
+        update(item)
     }
-    select() {
+    return(
+        <div className="flex">
+            <Image src={item.img} width="120" rounded />{item.title}
+            <div>
+                <Button variant="secondary" onClick={sub} size="sm">-</Button>
+                    {' '}x{' '}{item.count}{' '}
+                <Button variant="secondary" onClick={add} size="sm">+</Button>
+            </div>
+            <style jsx>
+                {
+                    `
+                    .flex{
+                        display:flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    `
+                }
+            </style>
+        </div>
+    )
+}
+export default () => {
+    const [data, setData] = useState([
+        {
+            id: 0,
+            title: "迈阿密风情",
+            price: 10,
+            count: 1,
+            img: "/static/images/1.jpg"
+        },
+        {
+            id: 1,
+            title: "小黄好心情",
+            price: 5,
+            count: 1,
+            img: "/static/images/2.jpg"
+        },
+        {
+            id: 3,
+            title: "水果的夏天",
+            price: 9.9,
+            count: 1,
+            img: "/static/images/3.jpg"
+        }
+    ]);
+    const [show, setShow] = useState(false);
+    const [id, setId] = useState(0);
+    let getChildrenMsg=(count)=>{
+        console.log(count)
+    }
+
+    let update=(item)=>{
+        let newdata=[]
+        data.map((one,i)=>{
+            if(one.id==item.id){
+                newdata.push(item)
+            }else{
+                newdata.push(one);
+            }
+        });
+        setData(newdata);
+    }
+
+    let select = () => {
         let count = 0;
-        this.state.data.map((item, i) => {
+        data.map((item, i) => {
             if (item.count > 0) {
                 count += item.count;
             }
         })
         return count;
     }
-    disabled() {
-        if (this.select() > 0) {
+    let disabled = () => {
+        if (select() > 0) {
             return false;
         } else {
             return true;
         }
     }
 
-    handleClose(){
-        this.setState({
-            show:false
-        })
+    let handleClose = () => {
+        setShow(false);
     }
-    post(){
-        let _self=this;
-        let select=[];
-        let price=0;
-        this.state.data.map((item, i) => {
+    let post = () => {
+        console.log('post')
+        let select = [];
+        let price = 0;
+        data.map((item, i) => {
             if (item.count > 0) {
-                price+=(item.price*item.count);
+                price += (item.price * item.count);
                 select.push(item)
             }
         })
-
-
         db = new Datastore({ filename: './db', autoload: true });
         db.count({}, function (err, count) {
             // count equals to 4
@@ -91,56 +123,49 @@ class App extends React.Component {
                 {
                     id: id,
                     state: 0, //0订单生效 1制作中 2等待顾客取走 3已完成,
-                    time:Date.now(),
-                    price:price,//总价
-                    list:select
+                    time: Date.now(),
+                    price: price,//总价
+                    list: select
                 }, function (err) {
-                    _self.setState({
-                        id:id
-                    })
+                    setId(id);
                 });
         });
-        this.setState({
-            show:true
-        })
+        setShow(true)
     }
-    render() {
-        return (
-            <div>
-                <Jumbotron>
-                    <h1>奶茶点餐系统</h1>
-                    <ListGroup>
-                        {this.state.data.map((item, i) => {
-                            if (item.count >= 0) {
-                                return (
-                                    <ListGroup.Item key={item.id}>
-                                        <Image src={item.img} width="120" rounded />{item.title}x{item.count}
-                                        <Button variant="secondary" onClick={this.sub.bind(this, item)} size="sm">-</Button>
-                                        {' '}<Button variant="secondary" onClick={this.add.bind(this, item)} size="sm">+</Button>
-                                    </ListGroup.Item>
-                                )
-                            }
-                        })}
-                    </ListGroup>
-                    <p><br></br>
-                        <Button onClick={this.post.bind(this)} disabled={this.disabled()} variant="primary">选好了
-                            <Badge variant="light">{this.select()}</Badge>
-                        </Button>
-                    </p>
-                    <Modal show={this.state.show} onHide={this.handleClose.bind(this)}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>订单已经生效</Modal.Title>
-                        </Modal.Header>
-                    <Modal.Body>您的订单号是 {this.state.id}，请注意大屏幕!</Modal.Body>
-                        <Modal.Footer>
-                            <Button variant="primary" onClick={this.handleClose.bind(this)}>
-                                确定
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
-                </Jumbotron>
-            </div>
-        )
-    }
+    return (
+        <Jumbotron>
+            <h1>奶茶点餐系统</h1>
+            <ListGroup>
+                
+                {data.map((item, i) => {
+                    if (item.count >= 0) {
+                        return (
+                            <ListGroup.Item key={item.id}>
+                                <MyContext.Provider value={{item,update}}>
+                                    <Item />
+                                </MyContext.Provider>
+                            </ListGroup.Item>
+                        )
+                    }
+                })}
+                
+            </ListGroup>
+            <p><br></br>
+                <Button onClick={post} disabled={disabled()} variant="primary">选好了
+                    <Badge variant="light">{select()}</Badge>
+                </Button>
+            </p>
+            <Modal show={show} onHide={handleClose}>
+                <Modal.Header closeButton>
+                    <Modal.Title>订单已经生效</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>您的订单号是 {id}，请注意大屏幕!</Modal.Body>
+                <Modal.Footer>
+                    <Button variant="primary" onClick={handleClose}>
+                        确定
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        </Jumbotron>
+    )
 }
-export default App
